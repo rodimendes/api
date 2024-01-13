@@ -1,9 +1,11 @@
-from flask import Flask
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
+
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'
 db = SQLAlchemy(app)
+app.app_context().push()
 
 
 class Country(db.Model):
@@ -18,6 +20,31 @@ class Country(db.Model):
 def index():
     return 'Hello!'
 
-@app.route('/countries')
+@app.route('/api/countries')
 def get_countries():
-    return {'country': 'country_data'}
+    countries_list = Country.query.all()
+
+    result = []
+    for country in countries_list:
+        countries_data = {'name': country.name, 'capital': country.capital}
+
+        result.append(countries_data)
+
+    return {'countries': result}
+
+@app.route('/api/countries/<id>')
+def get_country(id):
+    country = Country.query.get_or_404(id)
+
+    return {'name': country.name, 'capital': country.capital}
+
+
+@app.route('/api/countries', methods=['POST'])
+def add_data():
+    country = Country(name=request.json['name'],
+                      capital=request.json['capital'])
+
+    db.session.add(country)
+    db.session.commit()
+
+    return {'id': country.id}
